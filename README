@@ -1,0 +1,61 @@
+Computación Paralela - Laboratorio Nª1 
+El juego de la vida
+
+Integrantes: 	Pablo Salinas
+		Ismael Vicencio
+
+Profesor:	Manuel Manriquez López
+Ayudante:	José Orellana
+
+Reglas del juego:
+
+	* Si una célula viva tiene menos de 2 vecinos vivos muere
+	* Si una célula viva tiene 2 o 3 vecinos, sigue viva
+	* Si una célula viva tiene mas de 3 vecinos vivos, morirá
+	* Si una célula muerta tiene 3 vecinos, vivirá en el proximo turno
+
+Instrucciones:
+
+	*	Tener instalado el compilador gcc en el entorno de ejecución.
+	* 	Navegar al directorio donde se encuentran los ejecutables.
+	*	El directorio presenta la siguiente estructura
+		.
+		├── Readme
+		├── build
+		│   └── salida
+		├── ejemplo1
+		├── ejemplo2
+		├── ejemplo3
+		├── ejemplo4
+		├── main.c
+		└── makefile
+
+	* 	En el directorio se encuentran los casos de ejemplos para realizar la ejecución.
+	* 	El primer paso consiste en ejecutar el comando make, para compilar el programa
+	*	Existen 2 formar de ejecutar el programa
+
+		1)	*	Ejecutar el comando make ARGS="-f rutaDelCaso -i numeroDeIteraciones" run
+
+			a)	rutaDelCaso corresponde a la ruta del fichero que contiene el tablero. Se debe agregar a continuación
+				del parametro -f
+
+			b)	numeroDeIteraciones es el numero de ciclos que realizara la aplicación al realizar la simulación. Se debe  ingresar a continuación del argumento -i
+
+			Ejemplo: make ARGS="-f /Users/ismael/proyectos/juegodelavida/ejemplo1  -i 502" run;
+
+		2)	*	La siguiente forma es ir al directorio build, y ejecutar el comando:
+					 
+					 ./salida -f rutaDelCaso -i numeroDeIteraciones	
+
+			*	Se utilizan los argumentos descritos en a y b.
+
+			Ejemplo: ./ salida-f /Users/ismael/proyectos/juegodelavida/ejemplo1 -i 502
+
+	* 	Para borrar la aplicación compilada ejecutar el comando make clean.
+
+Extra:
+	El programa se compilo en el siguiente equipo
+
+	gcc versión 4.2.1
+	OS X YOSEMITE 10.10.3
+
