@@ -15,6 +15,7 @@ int main(int argc, char  *argv[]) {
 
   FILE *fichero;
   int iteraciones, leido;
+  int cantidadNodos;
   int tamanoX, tamanoY;
   char c;
   char *ruta;
@@ -65,6 +66,16 @@ int main(int argc, char  *argv[]) {
     fscanf(fichero, "%d %d", &tamanoX, &tamanoY);
     printf("Tamano x = %d  y = %d\n",  tamanoX, tamanoY);
 
+
+    // Inicializa el contador inicial de valores
+
+    int cantidadNodosProc[nprocs];
+    for (int i = 0; i < nprocs; i++) {
+      /* code */
+      cantidadNodosProc[i] = 0;
+    }
+    //memset(cantidadNodosProc, 0, nprocs);
+
     // Variable local solo para el proceso master
 
     int  **unTablero = (int **)malloc(tamanoX * sizeof(int*));
@@ -98,14 +109,43 @@ int main(int argc, char  *argv[]) {
 
     mostraTablero(unTablero, tamanoY, tamanoY);
     printf("Tablero Cargado con exito...\n");
-
-
     fclose(fichero);
+
+
+    //printf("Cada proceso analizara las siguientes columnas...\n");
+    for (int i = 0; i < tamanoX*tamanoY; i++) {
+        //printf("Proceso %d se encarga de la columnas %d\n", ((i) % nprocs),  i) ;
+        cantidadNodosProc[(i) % nprocs]++;
+    }
+
+    for (int i = 0; i < nprocs; i++) {
+      /* code */
+      printf("valor del arreglo %d\n", cantidadNodosProc[i] );
+    }
+
+    for (int i = 0; i < nprocs; i++) {
+       MPI_Isend(&cantidadNodosProc[i],1,MPI_INT,i,0,MPI_COMM_WORLD,&request);
+    }
+
+
+
   }
   MPI_Barrier(MPI_COMM_WORLD); // Detiene los procesos que estan bajo el mismo comunicador
   MPI_Bcast(&tamanoX, 1,MPI_INT,master,MPI_COMM_WORLD); /* Envia las variables a todos los procesos */
   MPI_Bcast(&tamanoY, 1,MPI_INT,master,MPI_COMM_WORLD);
-  printf("Proceso %d var X=%d Y=%d\n", rank, tamanoX, tamanoY);
+  //printf("Proceso %d var X=%d Y=%d\n", rank, tamanoX, tamanoY);
+  MPI_Irecv(&cantidadNodos,1,MPI_INT,master,0,MPI_COMM_WORLD, &request);
+  printf("Proceso %d leera %d nodos\n", rank, cantidadNodos);
+
+  // cada proceso debe tener un arreglo con el tamaño necesario para almacenar todos los elementos que almacenara
+  // cada proceso debe tener una matriz interna de nª de nodos * 8 para almacenar los vecinos para su posterior calculo
+
+  int *arregloNodos = (int*)malloc(sizeof(int)*cantidadNodos);
+  int **arregloVecinos;
+
+
+
+
   MPI_Finalize();
 
   return 0;
