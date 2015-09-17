@@ -10,14 +10,18 @@
 
 // Funciones a utilizar
 
-int **crearTablero(int x, int y, char *dir);
-
+int **crearTablero(int x, int y);
 void mostraTablero(int **tablero, int x, int y);
+int **pedirMemoria(int a, int b);
 
+
+// Main
 int main(int argc, char  *argv[]) {
 
   FILE *fichero;
   int **unTablero;
+  int **nodosEstudio;
+  int **nodoMaster;
   int iteraciones, leido, auxIter = 0;
   int cantidadNodos;
   int tamanoX, tamanoY;
@@ -28,12 +32,13 @@ int main(int argc, char  *argv[]) {
   // Inicia MPI
 
   int rank, nprocs;
-  MPI_Request request;
-  MPI_Status status;
 
   MPI_Init (&argc, &argv);
   MPI_Comm_rank (MPI_COMM_WORLD, &rank);
   MPI_Comm_size (MPI_COMM_WORLD, &nprocs);
+
+  MPI_Request request[nprocs];
+  MPI_Status status[nprocs];
 
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -73,6 +78,11 @@ int main(int argc, char  *argv[]) {
     fscanf(fichero, "%d %d", &tamanoX, &tamanoY);
     printf("Tamano x = %d  y = %d\n",  tamanoX, tamanoY);
 
+    if(nprocs > tamanoX*tamanoY ){
+      printf("Error existen mas procesos que elementos a paralelizar...\n");
+      MPI_Abort(MPI_COMM_WORLD, 1);
+      MPI_Finalize();
+    }
 
     // Inicializa el contador inicial de valores
 
@@ -84,11 +94,9 @@ int main(int argc, char  *argv[]) {
     //memset(cantidadNodosProc, 0, nprocs);
 
     // Variable local solo para el proceso master
-    unTablero = crearTablero(tamanoX, tamanoY, ruta);
+    unTablero = crearTablero(tamanoX, tamanoY);
 
     printf("Cargando datos del tablero\n");
-    // Carga el tablero desde archivo de texto
-
     printf("Inicia carga del tablero\n");
 
     for (int i = 0; i < tamanoX; i++)
@@ -118,7 +126,7 @@ int main(int argc, char  *argv[]) {
     }
 
     for (int i = 0; i < nprocs; i++) {
-       MPI_Isend(&cantidadNodosProc[i],1,MPI_INT,i,0,MPI_COMM_WORLD,&request);
+       MPI_Isend(&cantidadNodosProc[i],1,MPI_INT,i,0,MPI_COMM_WORLD,&request[i]);
     }
 
   }
@@ -127,9 +135,19 @@ int main(int argc, char  *argv[]) {
   MPI_Bcast(&tamanoX, 1,MPI_INT,master,MPI_COMM_WORLD); /* Envia las variables a todos los procesos */
   MPI_Bcast(&tamanoY, 1,MPI_INT,master,MPI_COMM_WORLD);
   //printf("Proceso %d var X=%d Y=%d\n", rank, tamanoX, tamanoY);
-  MPI_Irecv(&cantidadNodos,1,MPI_INT,master,0,MPI_COMM_WORLD, &request);
+  MPI_Irecv(&cantidadNodos,1,MPI_INT,master,0,MPI_COMM_WORLD, &request[rank]);
   printf("Proceso %d leera %d nodos en %d\n", rank, cantidadNodos, iteraciones);
 
+
+  // cada proceso tiene un puntero a un vector de int
+
+  nodosEstudio = crearTablero(cantidadNodos,8);
+
+  if(rank == master){
+    nodoMaster = crearTablero(tamanoX*tamanoY,3);
+  }
+
+MPI_Barrier(MPI_COMM_WORLD);
 
 /****************************************************************************/
 /****************************************************************************/
@@ -139,6 +157,7 @@ int main(int argc, char  *argv[]) {
 
   while(auxIter < iteraciones){ // Iteraciones generales del programa
 
+        MPI_Barrier(MPI_COMM_WORLD);
 
         /* el proceso master debe construir un vector de tamaño 11 int con los siguientes datos
 
@@ -150,24 +169,59 @@ int main(int argc, char  *argv[]) {
 
         */
 
-        if(rank == 0){ // Proceso master
-
-
-
-
-        }
-
-
-
-
-
-        while(contadorRecibidos < cantidadNodos){
-          contadorRecibidos++;
-        }
-
 
         MPI_Barrier(MPI_COMM_WORLD);
 
+        if(rank == master){ // Proceso master
+
+          int numeroElemento = 0;
+
+          for (int i = 0; i < tamanoX; i++) {
+            for (int j = 0; j < tamanoY; j++) {
+              // Por cada posicion del tablero debe de construir el elemento
+              int destino = (numeroElemento) % nprocs;
+              int arrayTempo[8];
+              arrayTempo[0] = i;
+              arrayTempo[1] = j;
+              arrayTempo[2] = unTablero[i][j];
+              printf("Valores enviados %d %d %d \n", arrayTempo[0],arrayTempo[1],arrayTempo[2]);
+
+              //busca los vecinos del punto seleccionado
+
+
+              MPI_Isend(&arrayTempo,3,MPI_INT,destino,destino,MPI_COMM_WORLD,&request[destino]);
+              numeroElemento++;
+            }
+          }
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        while(contadorRecibidos < cantidadNodos){
+          //printf("Proc: %d entradno al while\n", rank);
+          int temporal = 0;
+          MPI_Iprobe(master, rank, MPI_COMM_WORLD, &temporal,&status[rank]);
+          //printf("rank %d verificando... Iteracion %d \n", rank, contadorRecibidos);
+          if(temporal){
+            // recibe el mensaje
+            MPI_Irecv(nodosEstudio[contadorRecibidos],3,MPI_INT,master,rank,MPI_COMM_WORLD,&request[rank]);
+              printf("LLego dato a %d numero %d value %d %d %d\n", rank , contadorRecibidos+1, nodosEstudio[contadorRecibidos][0],nodosEstudio[contadorRecibidos][1],nodosEstudio[contadorRecibidos][2]);
+            temporal = 1;
+            contadorRecibidos++;
+          }
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        //El proceso muestra el elemento recibido
+        /*if(rank == 2){
+          for (int i = 0; i < cantidadNodos; i++) {
+              printf("Value %d", );
+          }
+
+        }*/
+
+        MPI_Barrier(MPI_COMM_WORLD);
         /*
           cada proceso envia los nuevos valores al proceso master
           se envia un vector de tamaño 3 con los siguientes datos
@@ -184,6 +238,7 @@ int main(int argc, char  *argv[]) {
         MPI_Barrier(MPI_COMM_WORLD);
 
         if(rank == 0){
+            //system("clear");
             printf("Master: Termino la Iteracion %d\n", auxIter+1 );
             auxIter++;
             mostraTablero(unTablero, tamanoX, tamanoY);
@@ -240,7 +295,7 @@ void mostraTablero(int **tablero, int x, int y){
 
 }
 
-int **crearTablero(int x, int y, char *dir){
+int **crearTablero(int x, int y){
 
   int **matriz = (int**)malloc(sizeof(int*)*x);
   for (int i = 0; i < x; i++) {
