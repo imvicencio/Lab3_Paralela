@@ -1,5 +1,6 @@
-Computación Paralela - Laboratorio Nª1 
+Computación Paralela - Laboratorio Nª3
 El juego de la vida
+Implementacion en MPI
 
 Integrantes: 	Pablo Salinas
 		Ismael Vicencio
@@ -16,23 +17,34 @@ Reglas del juego:
 
 Instrucciones:
 
-	*	Tener instalado el compilador gcc en el entorno de ejecución.
+	*		Tener instalado el compilador gcc en el entorno de ejecución.
+	* 	Tener instalada la libreria mpich2
 	* 	Navegar al directorio donde se encuentran los ejecutables.
-	*	El directorio presenta la siguiente estructura
-		.
-		├── Readme
+	*		El directorio presenta la siguiente estructura
+
+		├── LICENSE
+		├── README
+		├── Vagrantfile
 		├── build
 		│   └── salida
-		├── ejemplo1
-		├── ejemplo2
-		├── ejemplo3
-		├── ejemplo4
-		├── main.c
-		└── makefile
+		├── juegodelavida
+		│   ├── Readme
+		│   ├── build
+		│   │   └── salida
+		│   ├── ejemplo1
+		│   ├── ejemplo2
+		│   ├── ejemplo3
+		│   ├── ejemplo4
+		│   ├── main.c
+		│   └── makefile
+		├── makefile
+		└── src
+		    ├── ejemplo1
+		    └── main.c
 
 	* 	En el directorio se encuentran los casos de ejemplos para realizar la ejecución.
 	* 	El primer paso consiste en ejecutar el comando make, para compilar el programa
-	*	Existen 2 formar de ejecutar el programa
+	*		Existen 2 formar de ejecutar el programa
 
 		1)	*	Ejecutar el comando make ARGS="-f rutaDelCaso -i numeroDeIteraciones" run
 
@@ -41,21 +53,22 @@ Instrucciones:
 
 			b)	numeroDeIteraciones es el numero de ciclos que realizara la aplicación al realizar la simulación. Se debe  ingresar a continuación del argumento -i
 
-			Ejemplo: make ARGS="-f /Users/ismael/proyectos/juegodelavida/ejemplo1  -i 502" run;
+			Ejemplo: make ARGS=" -f src/ejemplo1 -i 10" run
 
 		2)	*	La siguiente forma es ir al directorio build, y ejecutar el comando:
-					 
-					 ./salida -f rutaDelCaso -i numeroDeIteraciones	
+
+					 mpirun -np numeroDeProcesos salida -f rutaDelCaso -i numeroDeIteraciones
 
 			*	Se utilizan los argumentos descritos en a y b.
+			* El argumento np es propio de MPICH y corresponde  a la cantidad de procesos a ejecutar.
 
-			Ejemplo: ./ salida-f /Users/ismael/proyectos/juegodelavida/ejemplo1 -i 502
+			Ejemplo: mpirun -np 4 salida -f src/ejemplo1 -i 20
 
 	* 	Para borrar la aplicación compilada ejecutar el comando make clean.
 
 Extra:
 	El programa se compilo en el siguiente equipo
 
-	gcc versión 4.2.1
-	OS X YOSEMITE 10.10.3
-
+	Ubuntu 14.04.03 LTS
+	gcc 4.8.4
+	MPICH 3.0.4
