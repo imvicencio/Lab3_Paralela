@@ -9,12 +9,16 @@
 #define master 0
 
 // Funciones a utilizar
+
+int **crearTablero(int x, int y, char *dir);
+
 void mostraTablero(int **tablero, int x, int y);
 
 int main(int argc, char  *argv[]) {
 
   FILE *fichero;
-  int iteraciones, leido;
+  int **unTablero;
+  int iteraciones, leido, auxIter = 0;
   int cantidadNodos;
   int tamanoX, tamanoY;
   char c;
@@ -30,6 +34,8 @@ int main(int argc, char  *argv[]) {
   MPI_Init (&argc, &argv);
   MPI_Comm_rank (MPI_COMM_WORLD, &rank);
   MPI_Comm_size (MPI_COMM_WORLD, &nprocs);
+
+  MPI_Barrier(MPI_COMM_WORLD);
 
   if (rank == master) {
     printf("Bienvenido al juego de la vida....\n");
@@ -78,15 +84,7 @@ int main(int argc, char  *argv[]) {
     //memset(cantidadNodosProc, 0, nprocs);
 
     // Variable local solo para el proceso master
-
-    int  **unTablero = (int **)malloc(tamanoX * sizeof(int*));
-  	int  **tableroCopia = (int **)malloc(tamanoX * sizeof(int*));
-
-    for (int i = 0; i < tamanoX; i++)
-    {
-      unTablero[i] = (int*)malloc(tamanoY * sizeof(int));
-      tableroCopia[i] = (int*)malloc(tamanoY * sizeof(int));
-    }
+    unTablero = crearTablero(tamanoX, tamanoY, ruta);
 
     printf("Cargando datos del tablero\n");
     // Carga el tablero desde archivo de texto
@@ -125,57 +123,88 @@ int main(int argc, char  *argv[]) {
 
   }
   MPI_Barrier(MPI_COMM_WORLD); // Detiene los procesos que estan bajo el mismo comunicador
+  MPI_Bcast(&iteraciones, 1,MPI_INT,master,MPI_COMM_WORLD);
   MPI_Bcast(&tamanoX, 1,MPI_INT,master,MPI_COMM_WORLD); /* Envia las variables a todos los procesos */
   MPI_Bcast(&tamanoY, 1,MPI_INT,master,MPI_COMM_WORLD);
   //printf("Proceso %d var X=%d Y=%d\n", rank, tamanoX, tamanoY);
   MPI_Irecv(&cantidadNodos,1,MPI_INT,master,0,MPI_COMM_WORLD, &request);
-  printf("Proceso %d leera %d nodos\n", rank, cantidadNodos);
-
-  /* el proceso master debe construir un vector de tamaño 11 int con los siguientes datos
-
-    coordenadas x e y
-    valor en las coordenadas
-    8 datos de tipo int con los valores de los vecinos a la coordenada x , y
-
-    El proceso master debe enviar a cada proceso todos los datos para el posterior calculo
-
-  */
-
-  if(rank == 0){ // Proceso master
+  printf("Proceso %d leera %d nodos en %d\n", rank, cantidadNodos, iteraciones);
 
 
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
 
+  while(auxIter < iteraciones){ // Iteraciones generales del programa
+
+
+        /* el proceso master debe construir un vector de tamaño 11 int con los siguientes datos
+
+          coordenadas x e y
+          valor en las coordenadas
+          8 datos de tipo int con los valores de los vecinos a la coordenada x , y
+
+          El proceso master debe enviar a cada proceso todos los datos para el posterior calculo
+
+        */
+
+        if(rank == 0){ // Proceso master
+
+
+
+
+        }
+
+
+
+
+
+        while(contadorRecibidos < cantidadNodos){
+          contadorRecibidos++;
+        }
+
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        /*
+          cada proceso envia los nuevos valores al proceso master
+          se envia un vector de tamaño 3 con los siguientes datos
+          pos 0 = coordenada x
+          pos 1 = coordenada y
+          pos 2 = value en coordenadas x , y
+
+        */
+
+        for (int i = 0; i < cantidadNodos; i++) {
+          /* code */
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        if(rank == 0){
+            printf("Master: Termino la Iteracion %d\n", auxIter+1 );
+            auxIter++;
+            mostraTablero(unTablero, tamanoX, tamanoY);
+
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Bcast(&auxIter, 1,MPI_INT,master,MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
   }
 
-  while(contadorRecibidos < cantidadNodos){
-
-
-
-
-
-    contadorRecibidos++;
-  }
-
-  /*
-    cada proceso envia los nuevos valores al proceso master
-    se envia un vector de tamaño 3 con los siguientes datos
-    pos 0 = coordenada x
-    pos 1 = coordenada y
-    pos 2 = value en coordenadas x , y
-
-  */
-
-  for (int i = 0; i < cantidadNodos; i++) {
-    /* code */
-  }
-
-
-
-
+  MPI_Barrier(MPI_COMM_WORLD);
   MPI_Finalize();
 
   return 0;
 }
+
+/************************************************************************/
+/************************************************************************/
+/************************************************************************/
+/************************************************************************/
+/************************************************************************/
 
 void mostraTablero(int **tablero, int x, int y){
 
@@ -208,5 +237,16 @@ void mostraTablero(int **tablero, int x, int y){
 
 		printf("\n");
 	}
+
+}
+
+int **crearTablero(int x, int y, char *dir){
+
+  int **matriz = (int**)malloc(sizeof(int*)*x);
+  for (int i = 0; i < x; i++) {
+    matriz[i] = (int*)malloc(sizeof(int)*y);
+  }
+
+  return matriz;
 
 }
