@@ -19,6 +19,7 @@ int main(int argc, char  *argv[]) {
   int tamanoX, tamanoY;
   char c;
   char *ruta;
+  int contadorRecibidos = 0;
 
   // Inicia MPI
 
@@ -119,15 +120,8 @@ int main(int argc, char  *argv[]) {
     }
 
     for (int i = 0; i < nprocs; i++) {
-      /* code */
-      printf("valor del arreglo %d\n", cantidadNodosProc[i] );
-    }
-
-    for (int i = 0; i < nprocs; i++) {
        MPI_Isend(&cantidadNodosProc[i],1,MPI_INT,i,0,MPI_COMM_WORLD,&request);
     }
-
-
 
   }
   MPI_Barrier(MPI_COMM_WORLD); // Detiene los procesos que estan bajo el mismo comunicador
@@ -137,11 +131,43 @@ int main(int argc, char  *argv[]) {
   MPI_Irecv(&cantidadNodos,1,MPI_INT,master,0,MPI_COMM_WORLD, &request);
   printf("Proceso %d leera %d nodos\n", rank, cantidadNodos);
 
-  // cada proceso debe tener un arreglo con el tamaño necesario para almacenar todos los elementos que almacenara
-  // cada proceso debe tener una matriz interna de nª de nodos * 8 para almacenar los vecinos para su posterior calculo
+  /* el proceso master debe construir un vector de tamaño 11 int con los siguientes datos
 
-  int *arregloNodos = (int*)malloc(sizeof(int)*cantidadNodos);
-  int **arregloVecinos;
+    coordenadas x e y
+    valor en las coordenadas
+    8 datos de tipo int con los valores de los vecinos a la coordenada x , y
+
+    El proceso master debe enviar a cada proceso todos los datos para el posterior calculo
+
+  */
+
+  if(rank == 0){ // Proceso master
+
+
+
+  }
+
+  while(contadorRecibidos < cantidadNodos){
+
+
+
+
+
+    contadorRecibidos++;
+  }
+
+  /*
+    cada proceso envia los nuevos valores al proceso master
+    se envia un vector de tamaño 3 con los siguientes datos
+    pos 0 = coordenada x
+    pos 1 = coordenada y
+    pos 2 = value en coordenadas x , y
+
+  */
+
+  for (int i = 0; i < cantidadNodos; i++) {
+    /* code */
+  }
 
 
 
