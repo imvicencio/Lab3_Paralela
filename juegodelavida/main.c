@@ -27,7 +27,7 @@ void limpiar(int **vector, int x){
 
 */
 int copiaTablero(int **original, int **copia, int x, int y){
-	
+
 
 	for (int i = 0; i < x; i++)
 	{
@@ -41,7 +41,7 @@ int copiaTablero(int **original, int **copia, int x, int y){
 }
 
 /* Funcion encargada de contar el numero de vecinos vivos que tiene una celula en particular
-	
+
 	Argumentos:
 
 	i posicion X en la matriz
@@ -58,7 +58,7 @@ int RevisarVecinos(int **tablero,int i, int j, int x, int y){
 
 	int contador = 0;
 
-	/* 
+	/*
 
 		Calcular todos lo vecinos de una celula que esten en los rangos permitidos de la matriz. En este punto
 		Se considera la matriz de forma finita.
@@ -77,11 +77,11 @@ int RevisarVecinos(int **tablero,int i, int j, int x, int y){
 
 			}
 
-		}		
+		}
 	}
 
 	/*
-		
+
 		A continuacion se procede a buscar los vecinos de las celulas que estan en los limites del
 		tablero. Se detallan los 8 casos extremos y los puntos del tablero que requieren para completar la exploracion
 		de vecinos vivos. Se realiza de esta forma para su posterior ejecucion en BSP.
@@ -93,7 +93,7 @@ int RevisarVecinos(int **tablero,int i, int j, int x, int y){
 
 	if(i == 0 && j == 0){
 
-		// Pide los valores que estan fuera del rango 
+		// Pide los valores que estan fuera del rango
 		contador = contador + tablero[x-1][1];
 		contador = contador + tablero[x-1][0];
 		contador = contador + tablero[x-1][y-1];
@@ -184,7 +184,7 @@ int RevisarVecinos(int **tablero,int i, int j, int x, int y){
 			}
 		}
 	}
-	
+
 	// Retorna el numero de vecinos vivos que tiene una celula
 
 	return contador;
@@ -209,7 +209,7 @@ void calcularVida(int **tableroInicial, int **tableroDestino, int x, int y){
 	{
 		for (int j = 0; j < y; j++)
 		{
-			
+
 				// Obtiene la cantidad de vecinos vivos de una celula
 				vecinosVivos = RevisarVecinos(tableroInicial,i,j,x,y);
 				// Obtiene el estado actual de la celula a analizar
@@ -218,7 +218,7 @@ void calcularVida(int **tableroInicial, int **tableroDestino, int x, int y){
 				if (valor == 1) // Celula esta viva
 				{
 					if (vecinosVivos < 2)
-					{	
+					{
 						// Celula muere	por soledad
 						status = 0;
 					}else{
@@ -231,9 +231,9 @@ void calcularVida(int **tableroInicial, int **tableroDestino, int x, int y){
 							if(vecinosVivos == 2 || vecinosVivos == 3){
 
 								status = 1;
-									
+
 							}
-							
+
 						}
 
 					}
@@ -249,7 +249,7 @@ void calcularVida(int **tableroInicial, int **tableroDestino, int x, int y){
 					}
 				}
 
-				
+
 				// Actualiza la posicion de la matriz de copia
 				tableroDestino[i][j] = status;
 				status = 0;
@@ -260,11 +260,11 @@ void calcularVida(int **tableroInicial, int **tableroDestino, int x, int y){
 }
 
 /* Funcion Mostrar Tablero
-	
+
 	Es la encargada de mostrar por pantalla el estado del tablero en un momento dado.
 	Se representa con un simbolo entre [ ].
 	Si la celula esta muerta se representa por --> [   ]
-	Si la celula esta viva se representa por --> [ * ] 
+	Si la celula esta viva se representa por --> [ * ]
 
 */
 void mostraTablero(int **tablero, int x, int y){
@@ -272,11 +272,11 @@ void mostraTablero(int **tablero, int x, int y){
 
 	for (int i = 0; i < x; i++)
 	{
-				
+
 		for (int j = 0; j < y; j++)
 		{
 
-			// Esta linea se puede descomentar para mostrar la matriz con los digitos 0 y 1 para representar 
+			// Esta linea se puede descomentar para mostrar la matriz con los digitos 0 y 1 para representar
 			// Las celulas del tablero
 
 			//printf(" %d ", tablero[i][j]);
@@ -285,7 +285,7 @@ void mostraTablero(int **tablero, int x, int y){
 			// de mostrar el tablero de juego
 
 			// Inicio mostrar
-			
+
 			if(tablero[i][j] == 0){
 				printf("[   ]");
 			}else{
@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
 
 	// Obtener argumentos
 	/*
-		
+
 		f = Ruta del fichero
 		i = numero de iteraciones
 
@@ -347,7 +347,7 @@ int main(int argc, char *argv[])
 
 		return 0;
 
-	} 
+	}
 
 	printf("Numero de iteraciones: %d\n",  iteraciones);
 
