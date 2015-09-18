@@ -14,7 +14,9 @@ int **crearTablero(int x, int y);
 void mostraTablero(int **tablero, int x, int y);
 int **pedirMemoria(int a, int b);
 int RevisarVecinos(int **tablero,int i, int j, int x, int y, int *vector);
-
+int **crearCero(int x, int y);
+int calculaVida(int *vector);
+int **ActualizarTablero(int **vector, int x, int y);
 
 // Main
 int main(int argc, char  *argv[]) {
@@ -142,10 +144,10 @@ int main(int argc, char  *argv[]) {
 
   // cada proceso tiene un puntero a un vector de int
 
-  nodosEstudio = crearTablero(cantidadNodos,8);
+  nodosEstudio = crearCero(cantidadNodos,11);
 
   if(rank == master){
-    nodoMaster = crearTablero(tamanoX*tamanoY,3);
+    nodoMaster = crearCero(tamanoX*tamanoY,3);
   }
 
 MPI_Barrier(MPI_COMM_WORLD);
@@ -181,33 +183,34 @@ MPI_Barrier(MPI_COMM_WORLD);
             for (int j = 0; j < tamanoY; j++) {
               // Por cada posicion del tablero debe de construir el elemento
               int destino = (numeroElemento) % nprocs;
-              int arrayTempo[8];
+              int arrayTempo[11];
               arrayTempo[0] = i;
               arrayTempo[1] = j;
               arrayTempo[2] = unTablero[i][j];
               //printf("Valores enviados %d %d %d \n", arrayTempo[0],arrayTempo[1],arrayTempo[2]);
 
               //busca los vecinos del punto seleccionado
+              int buscando = RevisarVecinos(unTablero,i, j, tamanoX, tamanoY, arrayTempo);
+              while(buscando < 8){
+                printf("buscando\n" );
+                buscando = RevisarVecinos(unTablero,i, j, tamanoX, tamanoY, arrayTempo);
+              }
 
-
-              MPI_Isend(&arrayTempo,3,MPI_INT,destino,destino,MPI_COMM_WORLD,&request[destino]);
+              MPI_Isend(&arrayTempo,11,MPI_INT,destino,destino,MPI_COMM_WORLD,&request[destino]);
               numeroElemento++;
             }
           }
         }
 
-        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD); // Barreras dobles debido a que las simples no funcionan correctamente sobre vagrant
         MPI_Barrier(MPI_COMM_WORLD);
 
         while(contadorRecibidos < cantidadNodos){
-          //printf("Proc: %d entradno al while\n", rank);
           int temporal = 0;
           MPI_Iprobe(master, rank, MPI_COMM_WORLD, &temporal,&status[rank]);
-          //printf("rank %d verificando... Iteracion %d \n", rank, contadorRecibidos);
           if(temporal){
             // recibe el mensaje
-            MPI_Irecv(nodosEstudio[contadorRecibidos],3,MPI_INT,master,rank,MPI_COMM_WORLD,&request[rank]);
-              //printf("LLego dato a %d numero %d value %d %d %d\n", rank , contadorRecibidos+1, nodosEstudio[contadorRecibidos][0],nodosEstudio[contadorRecibidos][1],nodosEstudio[contadorRecibidos][2]);
+            MPI_Irecv(nodosEstudio[contadorRecibidos],11,MPI_INT,master,rank,MPI_COMM_WORLD,&request[rank]);
             temporal = 1;
             contadorRecibidos++;
           }
@@ -215,14 +218,6 @@ MPI_Barrier(MPI_COMM_WORLD);
 
         MPI_Barrier(MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
-
-        //El proceso muestra el elemento recibido
-        /*if(rank == 2){
-          for (int i = 0; i < cantidadNodos; i++) {
-              printf("Value %d", );
-          }
-
-        }*/
 
         MPI_Barrier(MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
@@ -236,15 +231,57 @@ MPI_Barrier(MPI_COMM_WORLD);
         */
 
         for (int i = 0; i < cantidadNodos; i++) {
-          /* code */
+          int arrayAux[3];
+          arrayAux[0] = nodosEstudio[i][0];
+          arrayAux[1] = nodosEstudio[i][1];
+          arrayAux[2] = calculaVida(nodosEstudio[i]); // calcula el nuevo estado de la celula y lo almacena
+
+          MPI_Isend(&arrayAux,3,MPI_INT,master,rank,MPI_COMM_WORLD,&request[master]); // Se envian los datos a master
+
+
         }
 
         MPI_Barrier(MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
 
 
+        /*
+
+          Comienza master a recibir datos y comienza a completar la matriz
+
+        */
+        if(rank == 0){
+          int contadorMaster = 0;
+            printf("Master comienza a recibir datos...\n");
+            while(contadorMaster < tamanoY*tamanoX){
+              //printf("Proc: %d entradno al while\n", rank);
+              int temporal = 0;
+              MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &temporal,&status[rank]);
+              //printf("rank %d verificando... Iteracion %d \n", rank, contadorRecibidos);
+              if(temporal){
+                // recibe el mensaje
+                MPI_Irecv(nodoMaster[contadorMaster],3,MPI_INT,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&request[master]);
+                temporal = 1;
+                contadorMaster++;
+              }
+            }
+            printf("Master termino de recibir datos...\n");
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
+
+
+
+
         if(rank == 0){
             //system("clear");
+            for (int i = 0; i < tamanoY*tamanoX; i++) {
+              printf("%d %d %d\n",  nodoMaster[i][0], nodoMaster[i][1], nodoMaster[i][2]);
+            }
+
+            unTablero = ActualizarTablero(nodoMaster, tamanoX, tamanoY);
+
             printf("Master: Termino la Iteracion %d\n", auxIter+1 );
             auxIter++;
             mostraTablero(unTablero, tamanoX, tamanoY);
@@ -267,6 +304,30 @@ MPI_Barrier(MPI_COMM_WORLD);
 /************************************************************************/
 /************************************************************************/
 
+int **ActualizarTablero(int **vector, int x, int y){
+
+  int **matriz = (int**)malloc(sizeof(int*)*x);
+  for (int i = 0; i < x; i++) {
+    matriz[i] = (int*)malloc(sizeof(int)*y);
+  }
+
+  for (int i = 0; i < x * y; i++) {
+    int a , b, c;
+    a = vector[i][0];
+    b = vector[i][1];
+    c = vector[i][2];
+    matriz[a][b] = c;
+
+  }
+
+
+  return matriz;
+
+
+}
+
+
+
 void mostraTablero(int **tablero, int x, int y){
 
 
@@ -279,19 +340,19 @@ void mostraTablero(int **tablero, int x, int y){
 			// Esta linea se puede descomentar para mostrar la matriz con los digitos 0 y 1 para representar
 			// Las celulas del tablero
 
-			//printf(" %d ", tablero[i][j]);
+			printf(" %d ", tablero[i][j]);
 
 			// Se puede comentar el codigo entre "Inicio mostrar" y "termino mostrar" para ocultar la forma alternativa
 			// de mostrar el tablero de juego
 
 			// Inicio mostrar
-
+/*
 			if(tablero[i][j] == 0){
-				printf("[   ]");
+				printf("0");
 			}else{
 				printf("[ * ]");
 			}
-
+*/
 			// termino mostrar
 
 		}
@@ -312,10 +373,52 @@ int **crearTablero(int x, int y){
 
 }
 
+int **crearCero(int x, int y){
+
+  int **matriz = (int**)malloc(sizeof(int*)*x);
+  for (int i = 0; i < x; i++) {
+    matriz[i] = (int*)malloc(sizeof(int)*y);
+  }
+
+
+  for (int i = 0; i < x; i++) {
+    for (int j = 0; j < y; j++) {
+        matriz [i][j] = 0;
+    }
+  }
+
+  return matriz;
+
+}
+
+int calculaVida(int *vector){
+
+int viva = 0;
+int value = vector[2];
+int suma = 0;
+for (int i = 3; i < 11; i++) {
+  if(vector[i] == 1){
+      suma++;
+    }
+}
+
+
+if(value == 1 && (suma <=3 && suma >=2)){
+  viva = 1;
+}
+if(value == 0 && suma == 3){
+  viva = 1;
+}
+
+return viva;
+
+}
+
+
 int RevisarVecinos(int **tablero,int i, int j, int x, int y, int *vector){
 
-	int contador = 0;
-
+	int contador = 3;
+  int iteracion = 0;
 	/*
 
 		Calcular todos lo vecinos de una celula que esten en los rangos permitidos de la matriz. En este punto
@@ -328,11 +431,11 @@ int RevisarVecinos(int **tablero,int i, int j, int x, int y, int *vector){
 	{
 		for (int n = j-1; n <= j+1 ; n++)
 		{
+      iteracion++;
+			if(!(m == i && n == j) && (m >= 0 && n >= 0) && (m < x && j < y) && m != -1 && n != -1){
 
-			if(!(m == i && n == j) && m >= 0 && n >= 0 && m < x && j < y){
-
-				contador = contador + tablero[m][n];
-
+				vector[contador] = tablero[m][n];
+        contador = contador + 1;
 			}
 
 		}
@@ -352,11 +455,12 @@ int RevisarVecinos(int **tablero,int i, int j, int x, int y, int *vector){
 	if(i == 0 && j == 0){
 
 		// Pide los valores que estan fuera del rango
-		contador = contador + tablero[x-1][1];
-		contador = contador + tablero[x-1][0];
-		contador = contador + tablero[x-1][y-1];
-		contador = contador + tablero[0][y-1];
-		contador = contador + tablero[1][y-1];
+
+		vector[contador++] = tablero[x-1][1];
+		vector[contador++] = tablero[x-1][0];
+		vector[contador++] = tablero[x-1][y-1];
+		vector[contador++] = tablero[0][y-1];
+		vector[contador++] = tablero[1][y-1];
 
 
 	}else{
@@ -365,11 +469,11 @@ int RevisarVecinos(int **tablero,int i, int j, int x, int y, int *vector){
 		if (i == 0 && j == y-1)
 		{
 			// Pide los valores que estan fuera del rango
-			contador = contador + tablero[x-1][y-2];
-			contador = contador + tablero[x-1][y-1];
-			contador = contador + tablero[x-1][0];
-			contador = contador + tablero[0][0];
-			contador = contador + tablero[1][0];
+      vector[contador++] = tablero[x-1][y-2];
+      vector[contador++] = tablero[x-1][y-1];
+      vector[contador++] = tablero[x-1][0];
+      vector[contador++] = tablero[0][0];
+      vector[contador++] = tablero[1][0];
 
 		}else{
 
@@ -377,11 +481,11 @@ int RevisarVecinos(int **tablero,int i, int j, int x, int y, int *vector){
 			if (i == x-1 && j == 0)
 			{
 				// Pide los valores que estan fuera del rango
-				contador = contador + tablero[x-2][y-1];
-				contador = contador + tablero[x-1][y-1];
-				contador = contador + tablero[0][y-1];
-				contador = contador + tablero[0][0];
-				contador = contador + tablero[0][1];
+        vector[contador++] = tablero[x-2][y-1];
+        vector[contador++] = tablero[x-1][y-1];
+        vector[contador++] = tablero[0][y-1];
+        vector[contador++] = tablero[0][0];
+        vector[contador++] = tablero[0][1];
 
 			}else{
 
@@ -389,11 +493,11 @@ int RevisarVecinos(int **tablero,int i, int j, int x, int y, int *vector){
 				if (i == x-1 && j == y-1)
 				{
 					// Pide los valores que estan fuera del rango
-					contador = contador + tablero[x-2][0];
-					contador = contador + tablero[x-1][0];
-					contador = contador + tablero[0][0];
-					contador = contador + tablero[0][y-1];
-					contador = contador + tablero[0][y-2];
+					vector[contador++] = tablero[x-2][0];
+					vector[contador++] = tablero[x-1][0];
+					vector[contador++] = tablero[0][0];
+					vector[contador++] = tablero[0][y-1];
+					vector[contador++] = tablero[0][y-2];
 
 				}else{
 
@@ -401,9 +505,9 @@ int RevisarVecinos(int **tablero,int i, int j, int x, int y, int *vector){
 					if (i == 0)
 					{
 						// Pide los valores que estan fuera del rango
-						contador = contador + tablero[x-1][j-1];
-						contador = contador + tablero[x-1][j];
-						contador = contador + tablero[x-1][j+1];
+						vector[contador++] = tablero[x-1][j-1];
+						vector[contador++] = tablero[x-1][j];
+						vector[contador++] = tablero[x-1][j+1];
 
 					}else{
 
@@ -411,9 +515,9 @@ int RevisarVecinos(int **tablero,int i, int j, int x, int y, int *vector){
 						if (j == 0)
 						{
 							// Pide los valores que estan fuera del rango
-							contador = contador + tablero[i-1][y-1];
-							contador = contador + tablero[i][y-1];
-							contador = contador + tablero[i+1][y-1];
+							vector[contador++] = tablero[i-1][y-1];
+							vector[contador++] = tablero[i][y-1];
+							vector[contador++] = tablero[i+1][y-1];
 
 						}else{
 
@@ -421,18 +525,21 @@ int RevisarVecinos(int **tablero,int i, int j, int x, int y, int *vector){
 							if (j == y-1)
 							{
 								// Pide los valores que estan fuera del rango
-								contador = contador + tablero[i-1][0];
-								contador = contador + tablero[i][0];
-								contador = contador + tablero[i+1][0];
+								vector[8] = tablero[i-1][0];
+                contador++;
+								vector[9] = tablero[i][0];
+                contador++;
+								vector[10] = tablero[i+1][0];
+                contador++;
 
 							}else{
 								// Caso 8 Lado inferior
 								if(i == x-1){
 
 									// Pide los valores que estan fuera del rango
-									contador = contador + tablero[0][j-1];
-									contador = contador + tablero[0][j];
-									contador = contador + tablero[0][j+1];
+									vector[contador++] = tablero[0][j-1];
+									vector[contador++] = tablero[0][j];
+									vector[contador++] = tablero[0][j+1];
 
 								}
 							}
