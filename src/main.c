@@ -13,6 +13,7 @@
 int **crearTablero(int x, int y);
 void mostraTablero(int **tablero, int x, int y);
 int **pedirMemoria(int a, int b);
+int RevisarVecinos(int **tablero,int i, int j, int x, int y, int *vector);
 
 
 // Main
@@ -184,7 +185,7 @@ MPI_Barrier(MPI_COMM_WORLD);
               arrayTempo[0] = i;
               arrayTempo[1] = j;
               arrayTempo[2] = unTablero[i][j];
-              printf("Valores enviados %d %d %d \n", arrayTempo[0],arrayTempo[1],arrayTempo[2]);
+              //printf("Valores enviados %d %d %d \n", arrayTempo[0],arrayTempo[1],arrayTempo[2]);
 
               //busca los vecinos del punto seleccionado
 
@@ -196,6 +197,7 @@ MPI_Barrier(MPI_COMM_WORLD);
         }
 
         MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
 
         while(contadorRecibidos < cantidadNodos){
           //printf("Proc: %d entradno al while\n", rank);
@@ -205,12 +207,13 @@ MPI_Barrier(MPI_COMM_WORLD);
           if(temporal){
             // recibe el mensaje
             MPI_Irecv(nodosEstudio[contadorRecibidos],3,MPI_INT,master,rank,MPI_COMM_WORLD,&request[rank]);
-              printf("LLego dato a %d numero %d value %d %d %d\n", rank , contadorRecibidos+1, nodosEstudio[contadorRecibidos][0],nodosEstudio[contadorRecibidos][1],nodosEstudio[contadorRecibidos][2]);
+              //printf("LLego dato a %d numero %d value %d %d %d\n", rank , contadorRecibidos+1, nodosEstudio[contadorRecibidos][0],nodosEstudio[contadorRecibidos][1],nodosEstudio[contadorRecibidos][2]);
             temporal = 1;
             contadorRecibidos++;
           }
         }
 
+        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
 
         //El proceso muestra el elemento recibido
@@ -221,6 +224,7 @@ MPI_Barrier(MPI_COMM_WORLD);
 
         }*/
 
+        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
         /*
           cada proceso envia los nuevos valores al proceso master
@@ -236,6 +240,8 @@ MPI_Barrier(MPI_COMM_WORLD);
         }
 
         MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
+
 
         if(rank == 0){
             //system("clear");
@@ -304,4 +310,140 @@ int **crearTablero(int x, int y){
 
   return matriz;
 
+}
+
+int RevisarVecinos(int **tablero,int i, int j, int x, int y, int *vector){
+
+	int contador = 0;
+
+	/*
+
+		Calcular todos lo vecinos de una celula que esten en los rangos permitidos de la matriz. En este punto
+		Se considera la matriz de forma finita.
+
+		Los puntos extremos o de conflicto, quedan semi explorados en este punto.
+
+	*/
+	for (int m = i-1; m <= i+1; m++)
+	{
+		for (int n = j-1; n <= j+1 ; n++)
+		{
+
+			if(!(m == i && n == j) && m >= 0 && n >= 0 && m < x && j < y){
+
+				contador = contador + tablero[m][n];
+
+			}
+
+		}
+	}
+
+	/*
+
+		A continuacion se procede a buscar los vecinos de las celulas que estan en los limites del
+		tablero. Se detallan los 8 casos extremos y los puntos del tablero que requieren para completar la exploracion
+		de vecinos vivos. Se realiza de esta forma para su posterior ejecucion en BSP.
+
+	*/
+
+
+	// Caso 1 superior izquierdo
+
+	if(i == 0 && j == 0){
+
+		// Pide los valores que estan fuera del rango
+		contador = contador + tablero[x-1][1];
+		contador = contador + tablero[x-1][0];
+		contador = contador + tablero[x-1][y-1];
+		contador = contador + tablero[0][y-1];
+		contador = contador + tablero[1][y-1];
+
+
+	}else{
+
+		// Caso 2 superior derecha
+		if (i == 0 && j == y-1)
+		{
+			// Pide los valores que estan fuera del rango
+			contador = contador + tablero[x-1][y-2];
+			contador = contador + tablero[x-1][y-1];
+			contador = contador + tablero[x-1][0];
+			contador = contador + tablero[0][0];
+			contador = contador + tablero[1][0];
+
+		}else{
+
+			// Caso 3 inferior izquierdo
+			if (i == x-1 && j == 0)
+			{
+				// Pide los valores que estan fuera del rango
+				contador = contador + tablero[x-2][y-1];
+				contador = contador + tablero[x-1][y-1];
+				contador = contador + tablero[0][y-1];
+				contador = contador + tablero[0][0];
+				contador = contador + tablero[0][1];
+
+			}else{
+
+				// Caso 4 inferior derecha
+				if (i == x-1 && j == y-1)
+				{
+					// Pide los valores que estan fuera del rango
+					contador = contador + tablero[x-2][0];
+					contador = contador + tablero[x-1][0];
+					contador = contador + tablero[0][0];
+					contador = contador + tablero[0][y-1];
+					contador = contador + tablero[0][y-2];
+
+				}else{
+
+					// Caso 5 Lado superior
+					if (i == 0)
+					{
+						// Pide los valores que estan fuera del rango
+						contador = contador + tablero[x-1][j-1];
+						contador = contador + tablero[x-1][j];
+						contador = contador + tablero[x-1][j+1];
+
+					}else{
+
+						// Caso 6 Lado izquierdo
+						if (j == 0)
+						{
+							// Pide los valores que estan fuera del rango
+							contador = contador + tablero[i-1][y-1];
+							contador = contador + tablero[i][y-1];
+							contador = contador + tablero[i+1][y-1];
+
+						}else{
+
+							// Caso 7 Lado derecho
+							if (j == y-1)
+							{
+								// Pide los valores que estan fuera del rango
+								contador = contador + tablero[i-1][0];
+								contador = contador + tablero[i][0];
+								contador = contador + tablero[i+1][0];
+
+							}else{
+								// Caso 8 Lado inferior
+								if(i == x-1){
+
+									// Pide los valores que estan fuera del rango
+									contador = contador + tablero[0][j-1];
+									contador = contador + tablero[0][j];
+									contador = contador + tablero[0][j+1];
+
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Retorna el numero de vecinos vivos que tiene una celula
+
+	return contador;
 }
